@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../core/widgets/app_scaffold.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/models/licitacion.dart';
+import '../../../../core/providers/licitacion_provider.dart';
 
 class LicitacionesPage extends ConsumerStatefulWidget {
   const LicitacionesPage({super.key});
@@ -13,11 +15,18 @@ class LicitacionesPage extends ConsumerStatefulWidget {
 }
 
 class _LicitacionesPageState extends ConsumerState<LicitacionesPage> {
-  String? _selectedEstado;
-  String? _selectedCategoria;
+  final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
+    final licitacionesState = ref.watch(licitacionesProvider);
+
     return AppScaffold(
       title: 'Licitaciones',
       currentRoute: '/licitaciones',
@@ -44,7 +53,9 @@ class _LicitacionesPageState extends ConsumerState<LicitacionesPage> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'Gestión de licitaciones y ofertas',
+                            licitacionesState.data != null
+                                ? '${licitacionesState.data!.total} licitaciones encontradas'
+                                : 'Gestión de licitaciones y ofertas',
                             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                                   color: AppTheme.neutral700,
                                 ),
@@ -52,32 +63,82 @@ class _LicitacionesPageState extends ConsumerState<LicitacionesPage> {
                         ],
                       ),
                     ),
-                    ElevatedButton.icon(
+                    IconButton(
+                      icon: const Icon(Icons.refresh),
+                      tooltip: 'Actualizar',
                       onPressed: () {
-                        // TODO: Add licitacion
+                        ref.read(licitacionesProvider.notifier).refresh();
                       },
+                    ),
+                    const SizedBox(width: 8),
+                    ElevatedButton.icon(
+                      onPressed: () => _showCreateDialog(context),
                       icon: const Icon(Icons.add),
                       label: const Text('Nueva Licitación'),
                     ),
                   ],
                 ),
                 const SizedBox(height: 16),
+
+                // Search bar
+                TextField(
+                  controller: _searchController,
+                  decoration: InputDecoration(
+                    hintText: 'Buscar por número o título...',
+                    prefixIcon: const Icon(Icons.search),
+                    suffixIcon: _searchController.text.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear),
+                            onPressed: () {
+                              _searchController.clear();
+                              ref.read(licitacionesProvider.notifier).setSearchQuery(null);
+                            },
+                          )
+                        : null,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  onSubmitted: (value) {
+                    ref.read(licitacionesProvider.notifier).setSearchQuery(
+                          value.isEmpty ? null : value,
+                        );
+                  },
+                ),
+                const SizedBox(height: 16),
+
+                // Filters
                 Wrap(
                   spacing: 12,
                   runSpacing: 12,
                   children: [
                     _buildFilterChip(
                       'Estado',
-                      _selectedEstado,
+                      licitacionesState.filterEstado,
+                      LicitacionEstado.values.map((e) => e.name).toList(),
                       LicitacionEstado.values.map((e) => e.displayName).toList(),
-                      (value) => setState(() => _selectedEstado = value),
+                      (value) {
+                        ref.read(licitacionesProvider.notifier).setFilterEstado(value);
+                      },
                     ),
                     _buildFilterChip(
                       'Categoría',
-                      _selectedCategoria,
+                      licitacionesState.filterCategoria,
+                      LicitacionCategoria.values.map((e) => e.name).toList(),
                       LicitacionCategoria.values.map((e) => e.displayName).toList(),
-                      (value) => setState(() => _selectedCategoria = value),
+                      (value) {
+                        ref.read(licitacionesProvider.notifier).setFilterCategoria(value);
+                      },
                     ),
+                    if (licitacionesState.hasFilters)
+                      ActionChip(
+                        label: const Text('Limpiar filtros'),
+                        avatar: const Icon(Icons.clear_all, size: 18),
+                        onPressed: () {
+                          _searchController.clear();
+                          ref.read(licitacionesProvider.notifier).clearFilters();
+                        },
+                      ),
                   ],
                 ),
               ],
@@ -86,18 +147,7 @@ class _LicitacionesPageState extends ConsumerState<LicitacionesPage> {
 
           // List of licitaciones
           Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.all(24),
-              itemCount: 10, // TODO: Replace with real data
-              itemBuilder: (context, index) => _LicitacionCard(
-                numero: '2025-LIC-00${index + 1}',
-                titulo: 'Adquisición de Equipos de Cómputo',
-                cliente: 'Ministerio de Educación Pública',
-                estado: LicitacionEstado.publicada,
-                monto: 250000000,
-                fechaLimite: DateTime.now().add(Duration(days: index + 1)),
-              ),
-            ),
+            child: _buildLicitacionesList(licitacionesState),
           ),
         ],
       ),
@@ -107,15 +157,20 @@ class _LicitacionesPageState extends ConsumerState<LicitacionesPage> {
   Widget _buildFilterChip(
     String label,
     String? selected,
-    List<String> options,
+    List<String> optionValues,
+    List<String> optionLabels,
     Function(String?) onChanged,
   ) {
+    final selectedLabel = selected != null
+        ? optionLabels[optionValues.indexOf(selected)]
+        : null;
+
     return PopupMenuButton<String>(
       child: Chip(
         label: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(selected ?? label),
+            Text(selectedLabel ?? label),
             const SizedBox(width: 4),
             const Icon(Icons.arrow_drop_down, size: 18),
           ],
@@ -124,64 +179,248 @@ class _LicitacionesPageState extends ConsumerState<LicitacionesPage> {
       ),
       itemBuilder: (context) => [
         if (selected != null)
-          PopupMenuItem(
+          const PopupMenuItem(
             value: null,
-            child: const Text('Todos'),
+            child: Text('Todos'),
           ),
-        ...options.map(
-          (option) => PopupMenuItem(
-            value: option,
-            child: Text(option),
+        ...List.generate(
+          optionValues.length,
+          (index) => PopupMenuItem(
+            value: optionValues[index],
+            child: Text(optionLabels[index]),
           ),
         ),
       ],
       onSelected: onChanged,
     );
   }
+
+  Widget _buildLicitacionesList(LicitacionesState state) {
+    if (state.isLoading && state.data == null) {
+      return const Center(
+        child: CircularProgressIndicator(),
+      );
+    }
+
+    if (state.error != null && state.data == null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.error_outline,
+                size: 64,
+                color: AppTheme.errorColor,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Error al cargar licitaciones',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                state.error!,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: AppTheme.neutral700,
+                    ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton.icon(
+                onPressed: () {
+                  ref.read(licitacionesProvider.notifier).refresh();
+                },
+                icon: const Icon(Icons.refresh),
+                label: const Text('Reintentar'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (state.data == null || state.data!.items.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.inbox_outlined,
+                size: 64,
+                color: AppTheme.neutral500,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'No se encontraron licitaciones',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Intenta ajustar los filtros o crear una nueva licitación',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: AppTheme.neutral700,
+                    ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      children: [
+        Expanded(
+          child: RefreshIndicator(
+            onRefresh: () async {
+              ref.read(licitacionesProvider.notifier).refresh();
+            },
+            child: ListView.builder(
+              padding: const EdgeInsets.all(24),
+              itemCount: state.data!.items.length,
+              itemBuilder: (context, index) {
+                final licitacion = state.data!.items[index];
+                return _LicitacionCard(
+                  licitacion: licitacion,
+                  onTap: () {
+                    // TODO: Navigate to detail page
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Vista de detalle: ${licitacion.numeroLicitacion}'),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ),
+        if (state.data!.totalPages > 1) _buildPagination(state),
+      ],
+    );
+  }
+
+  Widget _buildPagination(LicitacionesState state) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border(
+          top: BorderSide(color: AppTheme.neutral300),
+        ),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            'Página ${state.currentPage} de ${state.data!.totalPages}',
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+          Row(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.chevron_left),
+                onPressed: state.currentPage > 1
+                    ? () => ref.read(licitacionesProvider.notifier).previousPage()
+                    : null,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                '${state.currentPage}',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+              ),
+              const SizedBox(width: 8),
+              IconButton(
+                icon: const Icon(Icons.chevron_right),
+                onPressed: state.currentPage < state.data!.totalPages
+                    ? () => ref.read(licitacionesProvider.notifier).nextPage()
+                    : null,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showCreateDialog(BuildContext context) {
+    // TODO: Implement create dialog
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Nueva Licitación'),
+        content: const Text(
+          'El formulario de creación se implementará en el siguiente paso.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cerrar'),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _LicitacionCard extends StatelessWidget {
-  final String numero;
-  final String titulo;
-  final String cliente;
-  final LicitacionEstado estado;
-  final double monto;
-  final DateTime fechaLimite;
+  final Licitacion licitacion;
+  final VoidCallback onTap;
 
   const _LicitacionCard({
-    required this.numero,
-    required this.titulo,
-    required this.cliente,
-    required this.estado,
-    required this.monto,
-    required this.fechaLimite,
+    required this.licitacion,
+    required this.onTap,
   });
 
   Color _getEstadoColor() {
+    final estado = LicitacionEstado.fromString(licitacion.estadoLicitacion);
     switch (estado) {
       case LicitacionEstado.adjudicada:
+      case LicitacionEstado.finalizada:
         return AppTheme.successColor;
       case LicitacionEstado.publicada:
       case LicitacionEstado.presentada:
+      case LicitacionEstado.enEvaluacion:
         return AppTheme.warningColor;
       case LicitacionEstado.rechazada:
       case LicitacionEstado.desierta:
         return AppTheme.errorColor;
+      case LicitacionEstado.enEjecucion:
+        return AppTheme.infoColor;
       default:
         return AppTheme.neutral500;
     }
   }
 
+  String _formatCurrency(double? amount) {
+    if (amount == null) return 'No especificado';
+    if (amount >= 1000000) {
+      return '₡${(amount / 1000000).toStringAsFixed(1)}M';
+    } else if (amount >= 1000) {
+      return '₡${(amount / 1000).toStringAsFixed(0)}K';
+    } else {
+      return '₡${amount.toStringAsFixed(0)}';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final daysLeft = fechaLimite.difference(DateTime.now()).inDays;
+    final estado = LicitacionEstado.fromString(licitacion.estadoLicitacion);
+    final fechaLimite = licitacion.fechaPresentacion ?? licitacion.fechaPublicacion;
+    final daysLeft = fechaLimite != null
+        ? fechaLimite.difference(DateTime.now()).inDays
+        : null;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       child: InkWell(
-        onTap: () {
-          // TODO: Navigate to detail
-        },
+        onTap: onTap,
         borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.all(20),
@@ -195,7 +434,7 @@ class _LicitacionCard extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          numero,
+                          licitacion.numeroLicitacion,
                           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                 color: AppTheme.neutral700,
                                 fontWeight: FontWeight.w600,
@@ -203,14 +442,17 @@ class _LicitacionCard extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          titulo,
+                          licitacion.tituloLicitacion,
                           style: Theme.of(context).textTheme.titleMedium?.copyWith(
                                 fontWeight: FontWeight.w600,
                               ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ],
                     ),
                   ),
+                  const SizedBox(width: 12),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
@@ -227,61 +469,64 @@ class _LicitacionCard extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Icon(Icons.business, size: 16, color: AppTheme.neutral500),
-                  const SizedBox(width: 6),
-                  Text(
-                    cliente,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: AppTheme.neutral700,
-                        ),
-                  ),
-                ],
-              ),
+              if (licitacion.descripcion != null) ...[
+                const SizedBox(height: 12),
+                Text(
+                  licitacion.descripcion!,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: AppTheme.neutral700,
+                      ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
               const Divider(height: 24),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Monto Estimado',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: AppTheme.neutral700,
-                            ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '₡${monto.toStringAsFixed(2)}',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w700,
-                              color: AppTheme.primaryBlue,
-                            ),
-                      ),
-                    ],
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Monto Estimado',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: AppTheme.neutral700,
+                              ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          _formatCurrency(licitacion.montoEstimado),
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.w700,
+                                color: AppTheme.primaryBlue,
+                              ),
+                        ),
+                      ],
+                    ),
                   ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                        'Días Restantes',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: AppTheme.neutral700,
-                            ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        daysLeft.toString(),
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w700,
-                              color: daysLeft <= 3 ? AppTheme.errorColor : AppTheme.warningColor,
-                            ),
-                      ),
-                    ],
-                  ),
+                  if (daysLeft != null)
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          daysLeft >= 0 ? 'Días Restantes' : 'Vencida',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: AppTheme.neutral700,
+                              ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          daysLeft >= 0 ? daysLeft.toString() : '${daysLeft.abs()}',
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.w700,
+                                color: daysLeft < 0
+                                    ? AppTheme.errorColor
+                                    : (daysLeft <= 3 ? AppTheme.errorColor : AppTheme.warningColor),
+                              ),
+                        ),
+                      ],
+                    ),
                 ],
               ),
             ],

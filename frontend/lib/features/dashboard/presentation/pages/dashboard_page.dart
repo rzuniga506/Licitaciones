@@ -4,49 +4,90 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/widgets/app_scaffold.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/config/app_config.dart';
+import '../../../../core/providers/dashboard_provider.dart';
+import '../../../../core/services/dashboard_service.dart';
 
 class DashboardPage extends ConsumerWidget {
   const DashboardPage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final statsAsync = ref.watch(dashboardStatsProvider);
+
     return AppScaffold(
       title: 'Dashboard',
       currentRoute: '/',
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header
-            Text(
-              'Dashboard',
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
+      child: RefreshIndicator(
+        onRefresh: () async {
+          ref.invalidate(dashboardStatsProvider);
+          ref.invalidate(recentActivityProvider);
+          ref.invalidate(upcomingDeadlinesProvider);
+        },
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Dashboard',
+                          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                                fontWeight: FontWeight.w700,
+                              ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Resumen general del sistema',
+                          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                color: AppTheme.neutral700,
+                              ),
+                        ),
+                      ],
+                    ),
                   ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Resumen general del sistema',
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: AppTheme.neutral700,
+                  IconButton(
+                    icon: const Icon(Icons.refresh),
+                    tooltip: 'Actualizar',
+                    onPressed: () {
+                      ref.invalidate(dashboardStatsProvider);
+                      ref.invalidate(recentActivityProvider);
+                      ref.invalidate(upcomingDeadlinesProvider);
+                    },
                   ),
-            ),
-            const SizedBox(height: 32),
+                ],
+              ),
+              const SizedBox(height: 32),
 
-            // KPI Cards
-            _buildKPIGrid(context),
-            const SizedBox(height: 24),
+              // KPI Cards
+              statsAsync.when(
+                data: (stats) => _buildKPIGrid(context, stats),
+                loading: () => _buildKPIGridLoading(context),
+                error: (error, stack) => _buildError(
+                  context,
+                  'Error al cargar estadísticas',
+                  error.toString(),
+                  () => ref.invalidate(dashboardStatsProvider),
+                ),
+              ),
+              const SizedBox(height: 24),
 
-            // Charts and Lists
-            _buildContentGrid(context),
-          ],
+              // Charts and Lists
+              _buildContentGrid(context),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildKPIGrid(BuildContext context) {
+  Widget _buildKPIGrid(BuildContext context, DashboardStats stats) {
     final size = MediaQuery.of(context).size;
     final isDesktop = size.width > AppConfig.desktopBreakpoint;
     final isTablet = size.width > AppConfig.tabletBreakpoint;
@@ -63,33 +104,110 @@ class DashboardPage extends ConsumerWidget {
       children: [
         _KPICard(
           title: 'Total Licitaciones',
-          value: '120',
-          subtitle: '+12 este mes',
+          value: stats.totalLicitaciones.toString(),
+          subtitle: stats.cambioMensualLicitaciones >= 0
+              ? '+${stats.cambioMensualLicitaciones} este mes'
+              : '${stats.cambioMensualLicitaciones} este mes',
           icon: Icons.gavel,
           color: AppTheme.primaryBlue,
         ),
         _KPICard(
           title: 'En Proceso',
-          value: '35',
-          subtitle: '29% del total',
+          value: stats.licitacionesEnProceso.toString(),
+          subtitle: '${stats.porcentajeEnProceso.toStringAsFixed(1)}% del total',
           icon: Icons.pending_actions,
           color: AppTheme.warningColor,
         ),
         _KPICard(
           title: 'Tasa de Éxito',
-          value: '70.5%',
-          subtitle: '+5.2% vs anterior',
+          value: '${stats.tasaExito.toStringAsFixed(1)}%',
+          subtitle: stats.cambioTasaExito >= 0
+              ? '+${stats.cambioTasaExito.toStringAsFixed(1)}% vs anterior'
+              : '${stats.cambioTasaExito.toStringAsFixed(1)}% vs anterior',
           icon: Icons.trending_up,
           color: AppTheme.successColor,
         ),
         _KPICard(
           title: 'Alertas Activas',
-          value: '8',
-          subtitle: '3 críticas',
+          value: stats.alertasActivas.toString(),
+          subtitle: '${stats.alertasCriticas} críticas',
           icon: Icons.notifications_active,
           color: AppTheme.errorColor,
         ),
       ],
+    );
+  }
+
+  Widget _buildKPIGridLoading(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+    final isDesktop = size.width > AppConfig.desktopBreakpoint;
+    final isTablet = size.width > AppConfig.tabletBreakpoint;
+
+    final crossAxisCount = isDesktop ? 4 : (isTablet ? 2 : 1);
+
+    return GridView.count(
+      crossAxisCount: crossAxisCount,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      crossAxisSpacing: 16,
+      mainAxisSpacing: 16,
+      childAspectRatio: 2.2,
+      children: List.generate(
+        4,
+        (index) => Card(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Center(
+              child: CircularProgressIndicator(
+                color: AppTheme.primaryBlue.withOpacity(0.3),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildError(
+    BuildContext context,
+    String title,
+    String message,
+    VoidCallback onRetry,
+  ) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          children: [
+            Icon(
+              Icons.error_outline,
+              size: 48,
+              color: AppTheme.errorColor,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              title,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              message,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: AppTheme.neutral700,
+                  ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: onRetry,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Reintentar'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -197,9 +315,11 @@ class _KPICard extends StatelessWidget {
   }
 }
 
-class _RecentActivity extends StatelessWidget {
+class _RecentActivity extends ConsumerWidget {
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final activityAsync = ref.watch(recentActivityProvider(5));
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -213,16 +333,52 @@ class _RecentActivity extends StatelessWidget {
                   ),
             ),
             const SizedBox(height: 20),
-            ListView.separated(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: 5,
-              separatorBuilder: (_, __) => const Divider(height: 24),
-              itemBuilder: (context, index) => _ActivityItem(
-                title: 'Licitación #2025-LIC-00${index + 1}',
-                subtitle: 'Estado actualizado a "En Evaluación"',
-                time: '${index + 1}h',
-                icon: Icons.update,
+            activityAsync.when(
+              data: (activities) {
+                if (activities.isEmpty) {
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(32),
+                      child: Text(
+                        'No hay actividad reciente',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: AppTheme.neutral500,
+                            ),
+                      ),
+                    ),
+                  );
+                }
+                return ListView.separated(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: activities.length,
+                  separatorBuilder: (_, __) => const Divider(height: 24),
+                  itemBuilder: (context, index) {
+                    final activity = activities[index];
+                    return _ActivityItemWidget(activity: activity);
+                  },
+                );
+              },
+              loading: () => const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(32),
+                  child: CircularProgressIndicator(),
+                ),
+              ),
+              error: (error, stack) => Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(32),
+                  child: Column(
+                    children: [
+                      const Icon(Icons.error_outline, color: AppTheme.errorColor),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Error al cargar actividad',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
           ],
@@ -232,9 +388,11 @@ class _RecentActivity extends StatelessWidget {
   }
 }
 
-class _UpcomingDeadlines extends StatelessWidget {
+class _UpcomingDeadlines extends ConsumerWidget {
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final deadlinesAsync = ref.watch(upcomingDeadlinesProvider(5));
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -248,16 +406,52 @@ class _UpcomingDeadlines extends StatelessWidget {
                   ),
             ),
             const SizedBox(height: 20),
-            ListView.separated(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: 4,
-              separatorBuilder: (_, __) => const Divider(height: 24),
-              itemBuilder: (context, index) => _DeadlineItem(
-                title: 'Presentación Oferta',
-                subtitle: 'LIC-${2025 - index}-001',
-                days: index + 2,
-                isUrgent: index == 0,
+            deadlinesAsync.when(
+              data: (deadlines) {
+                if (deadlines.isEmpty) {
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(32),
+                      child: Text(
+                        'No hay vencimientos próximos',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: AppTheme.neutral500,
+                            ),
+                      ),
+                    ),
+                  );
+                }
+                return ListView.separated(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: deadlines.length,
+                  separatorBuilder: (_, __) => const Divider(height: 24),
+                  itemBuilder: (context, index) {
+                    final deadline = deadlines[index];
+                    return _DeadlineItemWidget(deadline: deadline);
+                  },
+                );
+              },
+              loading: () => const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(32),
+                  child: CircularProgressIndicator(),
+                ),
+              ),
+              error: (error, stack) => Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(32),
+                  child: Column(
+                    children: [
+                      const Icon(Icons.error_outline, color: AppTheme.errorColor),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Error al cargar vencimientos',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
           ],
@@ -267,18 +461,25 @@ class _UpcomingDeadlines extends StatelessWidget {
   }
 }
 
-class _ActivityItem extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final String time;
-  final IconData icon;
+class _ActivityItemWidget extends StatelessWidget {
+  final ActivityItem activity;
 
-  const _ActivityItem({
-    required this.title,
-    required this.subtitle,
-    required this.time,
-    required this.icon,
-  });
+  const _ActivityItemWidget({required this.activity});
+
+  IconData _getIconForType() {
+    switch (activity.tipo.toLowerCase()) {
+      case 'licitacion':
+        return Icons.gavel;
+      case 'documento':
+        return Icons.description;
+      case 'alerta':
+        return Icons.notifications;
+      case 'contrato':
+        return Icons.assignment;
+      default:
+        return Icons.update;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -291,7 +492,9 @@ class _ActivityItem extends StatelessWidget {
             borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(
-            icon,
+            activity.icon != null
+                ? IconData(int.tryParse(activity.icon!) ?? 0xe318, fontFamily: 'MaterialIcons')
+                : _getIconForType(),
             size: 20,
             color: AppTheme.neutral700,
           ),
@@ -302,13 +505,13 @@ class _ActivityItem extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                title,
+                activity.title,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       fontWeight: FontWeight.w600,
                     ),
               ),
               Text(
-                subtitle,
+                activity.subtitle,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: AppTheme.neutral700,
                     ),
@@ -317,7 +520,7 @@ class _ActivityItem extends StatelessWidget {
           ),
         ),
         Text(
-          time,
+          activity.timeAgo,
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: AppTheme.neutral500,
               ),
@@ -327,44 +530,46 @@ class _ActivityItem extends StatelessWidget {
   }
 }
 
-class _DeadlineItem extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final int days;
-  final bool isUrgent;
+class _DeadlineItemWidget extends StatelessWidget {
+  final DeadlineItem deadline;
 
-  const _DeadlineItem({
-    required this.title,
-    required this.subtitle,
-    required this.days,
-    this.isUrgent = false,
-  });
+  const _DeadlineItemWidget({required this.deadline});
 
   @override
   Widget build(BuildContext context) {
+    final days = deadline.daysRemaining;
+    final isUrgent = deadline.isCritical;
+    final isOverdue = deadline.isOverdue;
+
     return Row(
       children: [
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
-            color: isUrgent
+            color: isOverdue
                 ? AppTheme.errorColor.withOpacity(0.1)
-                : AppTheme.warningColor.withOpacity(0.1),
+                : (isUrgent
+                    ? AppTheme.errorColor.withOpacity(0.1)
+                    : AppTheme.warningColor.withOpacity(0.1)),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Column(
             children: [
               Text(
-                days.toString(),
+                isOverdue ? days.abs().toString() : days.toString(),
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.w700,
-                      color: isUrgent ? AppTheme.errorColor : AppTheme.warningColor,
+                      color: isOverdue
+                          ? AppTheme.errorColor
+                          : (isUrgent ? AppTheme.errorColor : AppTheme.warningColor),
                     ),
               ),
               Text(
-                'días',
+                isOverdue ? 'vencido' : 'días',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: isUrgent ? AppTheme.errorColor : AppTheme.warningColor,
+                      color: isOverdue
+                          ? AppTheme.errorColor
+                          : (isUrgent ? AppTheme.errorColor : AppTheme.warningColor),
                     ),
               ),
             ],
@@ -376,13 +581,13 @@ class _DeadlineItem extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                title,
+                deadline.title,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       fontWeight: FontWeight.w600,
                     ),
               ),
               Text(
-                subtitle,
+                deadline.subtitle,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: AppTheme.neutral700,
                     ),
