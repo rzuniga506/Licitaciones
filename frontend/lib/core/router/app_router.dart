@@ -14,6 +14,8 @@ import '../../features/crm/presentation/pages/contactos_page.dart';
 import '../../features/crm/presentation/pages/interacciones_page.dart';
 import '../../features/ampliaciones/presentation/pages/ampliaciones_page.dart';
 import '../../features/ampliaciones/presentation/pages/ampliacion_detail_page.dart';
+import '../../features/usuarios/presentation/pages/usuarios_page.dart';
+import '../../features/usuarios/presentation/pages/usuario_detail_page.dart';
 import '../../features/alerts/presentation/pages/alerts_page.dart';
 import '../providers/auth_provider.dart';
 
@@ -115,6 +117,21 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             builder: (context, state) {
               final id = int.parse(state.pathParameters['id']!);
               return AmpliacionDetailPage(ampliacionId: id);
+            },
+          ),
+        ],
+      ),
+      GoRoute(
+        path: '/usuarios',
+        name: 'usuarios',
+        builder: (context, state) => const UsuariosPage(),
+        routes: [
+          GoRoute(
+            path: ':id',
+            name: 'usuario-detail',
+            builder: (context, state) {
+              final id = int.parse(state.pathParameters['id']!);
+              return UsuarioDetailPage(usuarioId: id);
             },
           ),
         ],

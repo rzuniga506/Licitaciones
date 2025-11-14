@@ -120,6 +120,14 @@ class _NavigationRail extends StatelessWidget {
             isSelected: currentRoute.startsWith('/ampliaciones'),
             onTap: () => context.go('/ampliaciones'),
           ),
+          const Divider(height: 32),
+          _NavItem(
+            icon: Icons.admin_panel_settings_outlined,
+            selectedIcon: Icons.admin_panel_settings,
+            label: 'Usuarios',
+            isSelected: currentRoute.startsWith('/usuarios'),
+            onTap: () => context.go('/usuarios'),
+          ),
         ],
       ),
     );
@@ -285,6 +293,17 @@ class _NavigationDrawer extends StatelessWidget {
             isSelected: currentRoute.startsWith('/ampliaciones'),
             onTap: () {
               context.go('/ampliaciones');
+              Navigator.pop(context);
+            },
+          ),
+          const Divider(height: 32),
+          _NavItem(
+            icon: Icons.admin_panel_settings_outlined,
+            selectedIcon: Icons.admin_panel_settings,
+            label: 'Usuarios',
+            isSelected: currentRoute.startsWith('/usuarios'),
+            onTap: () {
+              context.go('/usuarios');
               Navigator.pop(context);
             },
           ),
