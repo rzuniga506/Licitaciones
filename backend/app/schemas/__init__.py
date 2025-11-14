@@ -27,6 +27,54 @@ from app.schemas.licitacion import (
     LicitacionStats
 )
 
+from app.schemas.documento import (
+    DocumentoBase,
+    DocumentoCreate,
+    DocumentoUpdate,
+    DocumentoResponse,
+    DocumentoList,
+    DocumentoUpload
+)
+
+from app.schemas.ampliacion import (
+    AmpliacionBase,
+    AmpliacionCreate,
+    AmpliacionUpdate,
+    AmpliacionResponse,
+    AmpliacionList,
+    ProrrogaBase,
+    ProrrogaCreate,
+    ProrrogaUpdate,
+    ProrrogaResponse,
+    ProrrogaList
+)
+
+from app.schemas.crm import (
+    ContactoBase,
+    ContactoCreate,
+    ContactoUpdate,
+    ContactoResponse,
+    ContactoList,
+    InteraccionClienteBase,
+    InteraccionClienteCreate,
+    InteraccionClienteUpdate,
+    InteraccionClienteResponse,
+    InteraccionClienteList
+)
+
+from app.schemas.alerta import (
+    AlertaBase,
+    AlertaCreate,
+    AlertaUpdate,
+    AlertaResponse,
+    AlertaList,
+    AlertaStats,
+    ConfiguracionAlertasBase,
+    ConfiguracionAlertasCreate,
+    ConfiguracionAlertasUpdate,
+    ConfiguracionAlertasResponse
+)
+
 __all__ = [
     # User schemas
     "UserBase",
@@ -48,5 +96,46 @@ __all__ = [
     "LicitacionUpdate",
     "LicitacionResponse",
     "LicitacionList",
-    "LicitacionStats"
+    "LicitacionStats",
+    # Documento schemas
+    "DocumentoBase",
+    "DocumentoCreate",
+    "DocumentoUpdate",
+    "DocumentoResponse",
+    "DocumentoList",
+    "DocumentoUpload",
+    # Ampliacion schemas
+    "AmpliacionBase",
+    "AmpliacionCreate",
+    "AmpliacionUpdate",
+    "AmpliacionResponse",
+    "AmpliacionList",
+    # Prorroga schemas
+    "ProrrogaBase",
+    "ProrrogaCreate",
+    "ProrrogaUpdate",
+    "ProrrogaResponse",
+    "ProrrogaList",
+    # CRM schemas
+    "ContactoBase",
+    "ContactoCreate",
+    "ContactoUpdate",
+    "ContactoResponse",
+    "ContactoList",
+    "InteraccionClienteBase",
+    "InteraccionClienteCreate",
+    "InteraccionClienteUpdate",
+    "InteraccionClienteResponse",
+    "InteraccionClienteList",
+    # Alerta schemas
+    "AlertaBase",
+    "AlertaCreate",
+    "AlertaUpdate",
+    "AlertaResponse",
+    "AlertaList",
+    "AlertaStats",
+    "ConfiguracionAlertasBase",
+    "ConfiguracionAlertasCreate",
+    "ConfiguracionAlertasUpdate",
+    "ConfiguracionAlertasResponse"
 ]
