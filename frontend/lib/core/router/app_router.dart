@@ -10,6 +10,8 @@ import '../../features/clientes/presentation/pages/clientes_page.dart';
 import '../../features/clientes/presentation/pages/cliente_detail_page.dart';
 import '../../features/documentos/presentation/pages/documentos_page.dart';
 import '../../features/documentos/presentation/pages/documento_detail_page.dart';
+import '../../features/crm/presentation/pages/contactos_page.dart';
+import '../../features/crm/presentation/pages/interacciones_page.dart';
 import '../../features/alerts/presentation/pages/alerts_page.dart';
 import '../providers/auth_provider.dart';
 
@@ -89,6 +91,16 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             },
           ),
         ],
+      ),
+      GoRoute(
+        path: '/crm/contactos',
+        name: 'crm-contactos',
+        builder: (context, state) => const ContactosPage(),
+      ),
+      GoRoute(
+        path: '/crm/interacciones',
+        name: 'crm-interacciones',
+        builder: (context, state) => const InteraccionesPage(),
       ),
       GoRoute(
         path: '/alertas',

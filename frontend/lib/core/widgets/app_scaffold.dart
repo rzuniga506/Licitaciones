@@ -110,10 +110,8 @@ class _NavigationRail extends StatelessWidget {
             icon: Icons.people_outlined,
             selectedIcon: Icons.people,
             label: 'CRM',
-            isSelected: currentRoute == '/crm',
-            onTap: () {
-              // TODO: Implement
-            },
+            isSelected: currentRoute.startsWith('/crm'),
+            onTap: () => context.go('/crm/contactos'),
           ),
         ],
       ),
