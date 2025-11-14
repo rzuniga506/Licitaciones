@@ -6,6 +6,8 @@ import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/dashboard/presentation/pages/dashboard_page.dart';
 import '../../features/licitaciones/presentation/pages/licitaciones_page.dart';
 import '../../features/licitaciones/presentation/pages/licitacion_detail_page.dart';
+import '../../features/clientes/presentation/pages/clientes_page.dart';
+import '../../features/clientes/presentation/pages/cliente_detail_page.dart';
 import '../../features/alerts/presentation/pages/alerts_page.dart';
 import '../providers/auth_provider.dart';
 
@@ -52,6 +54,21 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             builder: (context, state) {
               final id = int.parse(state.pathParameters['id']!);
               return LicitacionDetailPage(licitacionId: id);
+            },
+          ),
+        ],
+      ),
+      GoRoute(
+        path: '/clientes',
+        name: 'clientes',
+        builder: (context, state) => const ClientesPage(),
+        routes: [
+          GoRoute(
+            path: ':id',
+            name: 'cliente-detail',
+            builder: (context, state) {
+              final id = int.parse(state.pathParameters['id']!);
+              return ClienteDetailPage(clienteId: id);
             },
           ),
         ],

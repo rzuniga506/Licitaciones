@@ -7,6 +7,7 @@ import '../../../../core/widgets/app_scaffold.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/models/licitacion.dart';
 import '../../../../core/providers/licitacion_provider.dart';
+import '../widgets/editar_licitacion_dialog.dart';
 
 class LicitacionDetailPage extends ConsumerWidget {
   final int licitacionId;
@@ -140,13 +141,19 @@ class LicitacionDetailPage extends ConsumerWidget {
                     IconButton(
                       icon: const Icon(Icons.edit),
                       tooltip: 'Editar',
-                      onPressed: () {
-                        // TODO: Implement edit
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Función de edición en desarrollo'),
+                      onPressed: () async {
+                        final result = await showDialog<bool>(
+                          context: context,
+                          barrierDismissible: false,
+                          builder: (context) => EditarLicitacionDialog(
+                            licitacion: licitacion,
                           ),
                         );
+
+                        // If edited successfully, data will auto-refresh via invalidate
+                        if (result == true && context.mounted) {
+                          // Data already refreshed in dialog
+                        }
                       },
                     ),
                     PopupMenuButton<String>(
