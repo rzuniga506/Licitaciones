@@ -17,3 +17,10 @@ class BaseModel:
 
 # Import all models here for Alembic to detect them
 from app.models.user import User  # noqa
+from app.models.cliente import Cliente  # noqa
+from app.models.licitacion import Licitacion  # noqa
+from app.models.documento import Documento  # noqa
+from app.models.ampliacion import Ampliacion, Prorroga  # noqa
+from app.models.crm import Contacto, InteraccionCliente  # noqa
+from app.models.alerta import Alerta, ConfiguracionAlertas  # noqa
+from app.models.auditoria import Auditoria  # noqa
