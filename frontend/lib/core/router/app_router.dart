@@ -12,6 +12,8 @@ import '../../features/documentos/presentation/pages/documentos_page.dart';
 import '../../features/documentos/presentation/pages/documento_detail_page.dart';
 import '../../features/crm/presentation/pages/contactos_page.dart';
 import '../../features/crm/presentation/pages/interacciones_page.dart';
+import '../../features/ampliaciones/presentation/pages/ampliaciones_page.dart';
+import '../../features/ampliaciones/presentation/pages/ampliacion_detail_page.dart';
 import '../../features/alerts/presentation/pages/alerts_page.dart';
 import '../providers/auth_provider.dart';
 
@@ -101,6 +103,21 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         path: '/crm/interacciones',
         name: 'crm-interacciones',
         builder: (context, state) => const InteraccionesPage(),
+      ),
+      GoRoute(
+        path: '/ampliaciones',
+        name: 'ampliaciones',
+        builder: (context, state) => const AmpliacionesPage(),
+        routes: [
+          GoRoute(
+            path: ':id',
+            name: 'ampliacion-detail',
+            builder: (context, state) {
+              final id = int.parse(state.pathParameters['id']!);
+              return AmpliacionDetailPage(ampliacionId: id);
+            },
+          ),
+        ],
       ),
       GoRoute(
         path: '/alertas',

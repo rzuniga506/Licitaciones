@@ -113,6 +113,13 @@ class _NavigationRail extends StatelessWidget {
             isSelected: currentRoute.startsWith('/crm'),
             onTap: () => context.go('/crm/contactos'),
           ),
+          _NavItem(
+            icon: Icons.extension_outlined,
+            selectedIcon: Icons.extension,
+            label: 'Ampliaciones',
+            isSelected: currentRoute.startsWith('/ampliaciones'),
+            onTap: () => context.go('/ampliaciones'),
+          ),
         ],
       ),
     );
@@ -237,6 +244,47 @@ class _NavigationDrawer extends StatelessWidget {
             isSelected: currentRoute == '/alertas',
             onTap: () {
               context.go('/alertas');
+              Navigator.pop(context);
+            },
+          ),
+          const Divider(height: 32),
+          _NavItem(
+            icon: Icons.business_outlined,
+            selectedIcon: Icons.business,
+            label: 'Clientes',
+            isSelected: currentRoute.startsWith('/clientes'),
+            onTap: () {
+              context.go('/clientes');
+              Navigator.pop(context);
+            },
+          ),
+          _NavItem(
+            icon: Icons.folder_outlined,
+            selectedIcon: Icons.folder,
+            label: 'Documentos',
+            isSelected: currentRoute.startsWith('/documentos'),
+            onTap: () {
+              context.go('/documentos');
+              Navigator.pop(context);
+            },
+          ),
+          _NavItem(
+            icon: Icons.people_outlined,
+            selectedIcon: Icons.people,
+            label: 'CRM',
+            isSelected: currentRoute.startsWith('/crm'),
+            onTap: () {
+              context.go('/crm/contactos');
+              Navigator.pop(context);
+            },
+          ),
+          _NavItem(
+            icon: Icons.extension_outlined,
+            selectedIcon: Icons.extension,
+            label: 'Ampliaciones',
+            isSelected: currentRoute.startsWith('/ampliaciones'),
+            onTap: () {
+              context.go('/ampliaciones');
               Navigator.pop(context);
             },
           ),
