@@ -104,9 +104,7 @@ class _NavigationRail extends StatelessWidget {
             selectedIcon: Icons.folder,
             label: 'Documentos',
             isSelected: currentRoute == '/documentos',
-            onTap: () {
-              // TODO: Implement
-            },
+            onTap: () => context.go('/documentos'),
           ),
           _NavItem(
             icon: Icons.people_outlined,
