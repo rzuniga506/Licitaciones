@@ -128,6 +128,13 @@ class _NavigationRail extends StatelessWidget {
             isSelected: currentRoute.startsWith('/usuarios'),
             onTap: () => context.go('/usuarios'),
           ),
+          _NavItem(
+            icon: Icons.history_outlined,
+            selectedIcon: Icons.history,
+            label: 'Auditoría',
+            isSelected: currentRoute.startsWith('/auditoria'),
+            onTap: () => context.go('/auditoria'),
+          ),
         ],
       ),
     );
@@ -304,6 +311,16 @@ class _NavigationDrawer extends StatelessWidget {
             isSelected: currentRoute.startsWith('/usuarios'),
             onTap: () {
               context.go('/usuarios');
+              Navigator.pop(context);
+            },
+          ),
+          _NavItem(
+            icon: Icons.history_outlined,
+            selectedIcon: Icons.history,
+            label: 'Auditoría',
+            isSelected: currentRoute.startsWith('/auditoria'),
+            onTap: () {
+              context.go('/auditoria');
               Navigator.pop(context);
             },
           ),

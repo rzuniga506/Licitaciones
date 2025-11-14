@@ -16,6 +16,7 @@ import '../../features/ampliaciones/presentation/pages/ampliaciones_page.dart';
 import '../../features/ampliaciones/presentation/pages/ampliacion_detail_page.dart';
 import '../../features/usuarios/presentation/pages/usuarios_page.dart';
 import '../../features/usuarios/presentation/pages/usuario_detail_page.dart';
+import '../../features/auditoria/presentation/pages/auditoria_page.dart';
 import '../../features/alerts/presentation/pages/alerts_page.dart';
 import '../providers/auth_provider.dart';
 
@@ -135,6 +136,11 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             },
           ),
         ],
+      ),
+      GoRoute(
+        path: '/auditoria',
+        name: 'auditoria',
+        builder: (context, state) => const AuditoriaPage(),
       ),
       GoRoute(
         path: '/alertas',
