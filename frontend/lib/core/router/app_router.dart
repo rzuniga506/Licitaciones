@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/dashboard/presentation/pages/dashboard_page.dart';
 import '../../features/licitaciones/presentation/pages/licitaciones_page.dart';
+import '../../features/licitaciones/presentation/pages/licitacion_detail_page.dart';
 import '../../features/alerts/presentation/pages/alerts_page.dart';
 import '../providers/auth_provider.dart';
 
@@ -44,6 +45,16 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         path: '/licitaciones',
         name: 'licitaciones',
         builder: (context, state) => const LicitacionesPage(),
+        routes: [
+          GoRoute(
+            path: ':id',
+            name: 'licitacion-detail',
+            builder: (context, state) {
+              final id = int.parse(state.pathParameters['id']!);
+              return LicitacionDetailPage(licitacionId: id);
+            },
+          ),
+        ],
       ),
       GoRoute(
         path: '/alertas',

@@ -6,6 +6,7 @@ import '../../../../core/widgets/app_scaffold.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/models/licitacion.dart';
 import '../../../../core/providers/licitacion_provider.dart';
+import '../widgets/nueva_licitacion_dialog.dart';
 
 class LicitacionesPage extends ConsumerStatefulWidget {
   const LicitacionesPage({super.key});
@@ -287,12 +288,7 @@ class _LicitacionesPageState extends ConsumerState<LicitacionesPage> {
                 return _LicitacionCard(
                   licitacion: licitacion,
                   onTap: () {
-                    // TODO: Navigate to detail page
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Vista de detalle: ${licitacion.numeroLicitacion}'),
-                      ),
-                    );
+                    context.go('/licitaciones/${licitacion.licitacionId}');
                   },
                 );
               },
@@ -349,23 +345,17 @@ class _LicitacionesPageState extends ConsumerState<LicitacionesPage> {
     );
   }
 
-  void _showCreateDialog(BuildContext context) {
-    // TODO: Implement create dialog
-    showDialog(
+  Future<void> _showCreateDialog(BuildContext context) async {
+    final result = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Nueva Licitación'),
-        content: const Text(
-          'El formulario de creación se implementará en el siguiente paso.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cerrar'),
-          ),
-        ],
-      ),
+      barrierDismissible: false,
+      builder: (context) => const NuevaLicitacionDialog(),
     );
+
+    // If licitacion was created successfully, result will be true
+    if (result == true && mounted) {
+      // List will auto-refresh due to invalidate in the dialog
+    }
   }
 }
 
